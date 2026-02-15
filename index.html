@@ -904,6 +904,7 @@
 ```
     <div class="controls">
         <button class="theme-toggle" onclick="toggleTheme()">🌓 Toggle Theme</button>
+        <button class="theme-toggle" onclick="showAPISettings()">🔑 AI Settings</button>
         <button class="crisis-btn" onclick="showCrisisModal()">🆘 Crisis Help</button>
     </div>
 
@@ -991,7 +992,12 @@
     <!-- AI Coach Section -->
     <div id="coach" class="section">
         <div class="card">
-            <h2>Chat with Your AI Coach</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin-bottom: 0;">Chat with Your AI Coach</h2>
+                <div style="display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: rgba(212, 119, 60, 0.1); border-radius: 20px;">
+                    <span id="coachModeIndicator">🧠 Smart Mode</span>
+                </div>
+            </div>
             <p style="margin-bottom: 20px; color: var(--dark-soft);">
                 Get personalized insights based on your wellness patterns. Ask me anything!
             </p>
@@ -1006,7 +1012,7 @@
                 <button class="send-btn" onclick="sendMessage()" id="sendBtn">Send</button>
             </div>
             <p style="margin-top: 20px; font-size: 0.9em; color: var(--dark-soft); background: rgba(212, 119, 60, 0.05); padding: 15px; border-radius: var(--radius-sm);">
-                💡 <strong>Note:</strong> This AI coach analyzes your check-in patterns. For full AI integration with Anthropic's Claude API, see README.md for setup instructions.
+                💡 <strong>Tip:</strong> Click "🔑 AI Settings" above to upgrade to Claude API for natural conversations. Current mode works great with intelligent pattern matching!
             </p>
         </div>
     </div>
@@ -1083,6 +1089,69 @@
         </div>
 
         <button class="close-modal" onclick="hideCrisisModal()">Close</button>
+    </div>
+</div>
+
+<!-- API Settings Modal -->
+<div class="modal" id="apiModal">
+    <div class="modal-content">
+        <h2 style="color: var(--primary);">🤖 AI Coach Settings</h2>
+        
+        <div style="background: rgba(212, 119, 60, 0.1); padding: 20px; border-radius: var(--radius-sm); margin-bottom: 25px; border-left: 4px solid var(--primary);">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                <span style="font-size: 1.5em;">💡</span>
+                <strong>Current Mode: <span id="aiMode">Smart Rule-Based</span></strong>
+            </div>
+            <p style="font-size: 0.95em; line-height: 1.6; color: var(--dark-soft);">
+                Your AI Coach works great right now using intelligent pattern matching. 
+                Upgrade to Claude API for natural conversations and deeper personalization.
+            </p>
+        </div>
+
+        <h3 style="font-size: 1.3em; margin-bottom: 15px;">Upgrade to Claude AI (Optional)</h3>
+        
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 8px;">Anthropic API Key</label>
+            <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-..." 
+                style="width: 100%; padding: 12px; border: 2px solid var(--light-soft); border-radius: var(--radius-sm); font-family: monospace; font-size: 0.9em;">
+            <p style="font-size: 0.85em; color: var(--dark-soft); margin-top: 8px;">
+                Get your key from <a href="https://console.anthropic.com" target="_blank" style="color: var(--primary);">console.anthropic.com</a>
+            </p>
+        </div>
+
+        <div style="background: rgba(122, 157, 126, 0.1); padding: 15px; border-radius: var(--radius-sm); margin-bottom: 20px;">
+            <h4 style="margin-bottom: 8px;">✅ Benefits of Claude AI:</h4>
+            <ul style="margin-left: 20px; line-height: 1.8; font-size: 0.95em;">
+                <li>Natural, flowing conversations</li>
+                <li>Deep analysis of YOUR patterns</li>
+                <li>Contextual memory during chats</li>
+                <li>Truly personalized insights</li>
+            </ul>
+        </div>
+
+        <div style="background: rgba(232, 184, 109, 0.1); padding: 15px; border-radius: var(--radius-sm); margin-bottom: 20px;">
+            <h4 style="margin-bottom: 8px;">💰 Cost (Pay-as-you-go):</h4>
+            <p style="font-size: 0.95em; line-height: 1.6;">
+                ~$0.005 per conversation turn<br>
+                Typical usage: $2-5/month<br>
+                <strong>Set spending limits in Anthropic console</strong>
+            </p>
+        </div>
+
+        <div style="background: rgba(232, 93, 74, 0.1); padding: 15px; border-radius: var(--radius-sm); margin-bottom: 20px;">
+            <h4 style="margin-bottom: 8px;">🔒 Privacy Note:</h4>
+            <p style="font-size: 0.95em; line-height: 1.6;">
+                With Claude API, your messages and check-in data are sent to Anthropic's servers for processing. 
+                Your API key is stored locally in your browser only.
+            </p>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <button class="btn-primary" onclick="saveAPIKey()" style="flex: 1;">💾 Save API Key</button>
+            <button class="btn-secondary" onclick="removeAPIKey()" style="background: var(--warning);">🗑️ Remove</button>
+        </div>
+
+        <button class="close-modal" onclick="hideAPIModal()" style="margin-top: 15px;">Close</button>
     </div>
 </div>
 
@@ -1232,54 +1301,130 @@
         addChatMessage('user', message);
         input.value = '';
 
+        const sendBtn = document.getElementById('sendBtn');
+        sendBtn.disabled = true;
+        sendBtn.textContent = '...';
+
         const context = getInsightContext();
-        const aiResponse = getAIResponse(message, context);
         
-        setTimeout(() => {
+        // Hybrid approach - check for API key
+        getAIResponse(message, context).then(aiResponse => {
             addChatMessage('ai', aiResponse);
-        }, 1000);
+            sendBtn.disabled = false;
+            sendBtn.textContent = 'Send';
+        }).catch(error => {
+            console.error('AI Error:', error);
+            addChatMessage('ai', "I'm having trouble right now. Let me try to help anyway - what specific aspect of your wellness would you like to discuss?");
+            sendBtn.disabled = false;
+            sendBtn.textContent = 'Send';
+        });
     }
 
-    function addChatMessage(type, content) {
-        const messagesDiv = document.getElementById('chatMessages');
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${type}`;
-        messageDiv.innerHTML = `
-            <div class="message-label">${type === 'user' ? 'You' : 'AI Coach'}</div>
-            <div>${content}</div>
-        `;
-        messagesDiv.appendChild(messageDiv);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    }
-
-    function getInsightContext() {
-        if (entries.length === 0) return 'No check-in data yet.';
+    async function getAIResponse(userMessage, context) {
+        const apiKey = localStorage.getItem('coherenceCompassAPIKey');
         
-        const recent = entries.slice(0, 7);
-        const avgMood = (recent.reduce((sum, e) => sum + e.mood, 0) / recent.length).toFixed(1);
-        const avgEnergy = (recent.reduce((sum, e) => sum + e.energy, 0) / recent.length).toFixed(1);
-        return `Recent data (last 7 days): Average mood ${avgMood}/5, energy ${avgEnergy}/10. Total entries: ${entries.length}.`;
+        if (apiKey && apiKey.startsWith('sk-ant-')) {
+            // Use Claude API
+            return await getClaudeAPIResponse(userMessage, context, apiKey);
+        } else {
+            // Use rule-based responses
+            return getRuleBasedResponse(userMessage, context);
+        }
     }
 
-    function getAIResponse(userMessage, context) {
+    async function getClaudeAPIResponse(userMessage, context, apiKey) {
+        try {
+            const response = await fetch("https://api.anthropic.com/v1/messages", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-api-key": apiKey,
+                    "anthropic-version": "2023-06-01"
+                },
+                body: JSON.stringify({
+                    model: "claude-sonnet-4-20250514",
+                    max_tokens: 1024,
+                    system: `You are a compassionate mental health wellness coach helping users understand their patterns and develop healthy habits.
+```
+
+Current user data: ${context}
+
+Guidelines:
+
+- Be warm, empathetic, and supportive
+- Provide evidence-based mental health strategies
+- Reference their actual data patterns when relevant
+- Ask clarifying questions when helpful
+- Never diagnose or replace professional care
+- Encourage self-compassion and healthy habits
+- Keep responses concise but meaningful (2-3 paragraphs max)`,
+  messages: [
+  {
+  role: “user”,
+  content: userMessage
+  }
+  ]
+  })
+  });
+  
+  ```
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Claude API Error:', response.status, errorText);
+                
+                if (response.status === 401) {
+                    localStorage.removeItem('coherenceCompassAPIKey');
+                    updateAIMode();
+                    throw new Error('Invalid API key. Please check your key in AI Settings.');
+                }
+                throw new Error(`API Error: ${response.status}`);
+            }
+  
+            const data = await response.json();
+            return data.content[0].text;
+  
+        } catch (error) {
+            console.error('Claude API Error:', error);
+            // Fall back to rule-based on error
+            return getRuleBasedResponse(userMessage, context) + "\n\n(Note: Temporarily using smart mode due to API issue)";
+        }
+    }
+  
+    function getRuleBasedResponse(userMessage, context) {
         const msg = userMessage.toLowerCase();
         
-        if (msg.includes('sleep')) {
+        if (msg.includes('sleep') || msg.includes('tired') || msg.includes('rest')) {
             return "Sleep quality has a huge impact on mental health. From your data, I can see correlations between sleep and next-day energy. Would you like some evidence-based tips for better sleep?";
         }
-        if (msg.includes('stress') || msg.includes('anxious')) {
+        if (msg.includes('stress') || msg.includes('anxious') || msg.includes('worry') || msg.includes('overwhelm')) {
             return "Stress management is key to wellness. Some effective strategies include: setting boundaries, taking micro-breaks, and practicing the breathing exercise in the Breathe tab. Which resonates with you?";
         }
-        if (msg.includes('exercise') || msg.includes('workout')) {
+        if (msg.includes('exercise') || msg.includes('workout') || msg.includes('movement') || msg.includes('active')) {
             return "Exercise is powerful for mental health! Even 20 minutes of movement can boost mood and reduce anxiety. What type of physical activity do you enjoy most?";
         }
-        if (msg.includes('mood') || msg.includes('feeling')) {
+        if (msg.includes('mood') || msg.includes('feeling') || msg.includes('emotion')) {
             return "I notice you're tracking your mood regularly - that's great! Self-awareness is the first step toward positive change. Have you noticed any patterns in what tends to lift your mood?";
         }
+        if (msg.includes('social') || msg.includes('friend') || msg.includes('lonely') || msg.includes('connect')) {
+            return "Social connection is vital for mental wellbeing. Research shows that meaningful relationships significantly impact our happiness. How has social time been affecting your mood lately?";
+        }
+        if (msg.includes('goal') || msg.includes('improve') || msg.includes('change') || msg.includes('better')) {
+            return "Setting wellness goals is a powerful step! I'd recommend starting small - choose one habit that feels achievable. What's one thing you'd like to focus on this week?";
+        }
+        if (msg.includes('data') || msg.includes('pattern') || msg.includes('trend') || msg.includes('insight')) {
+            return context + "\n\nBased on your tracking, I can help you identify patterns. What specific aspect of your wellness would you like to explore?";
+        }
+        if (msg.includes('meditation') || msg.includes('mindful') || msg.includes('breathe')) {
+            return "Mindfulness and breathing exercises are scientifically proven to reduce stress and anxiety. Try the guided breathing exercise in the Breathe tab - just 5 minutes can make a difference. Have you tried it yet?";
+        }
+        if (msg.includes('help') || msg.includes('what can') || msg.includes('how do')) {
+            return "I'm here to support your wellness journey! I can help you:\n\n• Understand patterns in your mood and energy\n• Get evidence-based wellness strategies\n• Set and track goals\n• Discuss what's on your mind\n\nWhat would be most helpful for you right now?";
+        }
         
+        // Default response
         return "I'm here to support your wellness journey. I can help you understand patterns, get evidence-based strategies, or just talk through what's on your mind. What would be most helpful right now?";
     }
-
+  
     function startBreathing() {
         const circle = document.getElementById('breathingCircle');
         const phase = document.getElementById('breathingPhase');
@@ -1292,7 +1437,7 @@
             { name: 'Exhale', duration: 4000, class: 'exhale', text: 'Breathe out slowly through your mouth' },
             { name: 'Rest', duration: 2000, class: 'exhale', text: 'Rest and notice how you feel' }
         ];
-
+  
         function nextPhase() {
             const current = phases[step % phases.length];
             circle.className = `breathing-circle ${current.class}`;
@@ -1300,11 +1445,11 @@
             text.textContent = current.text;
             step++;
         }
-
+  
         nextPhase();
         breathingInterval = setInterval(nextPhase, 4000);
     }
-
+  
     function stopBreathing() {
         if (breathingInterval) {
             clearInterval(breathingInterval);
@@ -1314,10 +1459,10 @@
             document.getElementById('breathingText').textContent = 'Take a moment to center yourself';
         }
     }
-
+  
     function renderInsights() {
         const container = document.getElementById('insightsContent');
-
+  
         if (entries.length < 3) {
             container.innerHTML = `
                 <div class="card">
@@ -1329,10 +1474,10 @@
             `;
             return;
         }
-
+  
         const stats = calculateStats();
         const patterns = detectPatterns();
-
+  
         let html = '<div class="card"><h2>Your Wellness Insights</h2>';
         
         html += '<div class="stats-grid">';
@@ -1363,7 +1508,7 @@
             </div>
         `;
         html += '</div>';
-
+  
         if (patterns.length > 0) {
             patterns.forEach(pattern => {
                 html += `
@@ -1375,21 +1520,21 @@
                 `;
             });
         }
-
+  
         html += '<div class="chart-wrapper"><canvas id="trendChart"></canvas></div>';
         html += '</div>';
         container.innerHTML = html;
-
+  
         setTimeout(renderCharts, 100);
     }
-
+  
     function calculateStats() {
         const sum = entries.reduce((acc, entry) => ({
             mood: acc.mood + entry.mood,
             energy: acc.energy + entry.energy,
             sleep: acc.sleep + entry.sleep
         }), { mood: 0, energy: 0, sleep: 0 });
-
+  
         let streak = 0;
         let currentDate = new Date();
         currentDate.setHours(0, 0, 0, 0);
@@ -1404,14 +1549,14 @@
                 break;
             }
         }
-
+  
         const dayScores = {};
         entries.forEach(entry => {
             const day = new Date(entry.date).toLocaleDateString('en-US', { weekday: 'short' });
             if (!dayScores[day]) dayScores[day] = [];
             dayScores[day].push(entry.mood);
         });
-
+  
         let bestDay = 'N/A';
         let bestScore = 0;
         Object.entries(dayScores).forEach(([day, scores]) => {
@@ -1421,7 +1566,7 @@
                 bestDay = day;
             }
         });
-
+  
         return {
             avgMood: sum.mood / entries.length,
             avgEnergy: sum.energy / entries.length,
@@ -1430,7 +1575,7 @@
             bestDay
         };
     }
-
+  
     function detectPatterns() {
         const patterns = [];
         
@@ -1449,7 +1594,7 @@
                 });
             }
         }
-
+  
         const goodSleep = entries.filter(e => e.sleep >= 7);
         const poorSleep = entries.filter(e => e.sleep < 7);
         
@@ -1465,7 +1610,7 @@
                 });
             }
         }
-
+  
         const withStress = entries.filter(e => e.factors.includes('work_stress'));
         if (withStress.length >= 3) {
             const avgMood = withStress.reduce((sum, e) => sum + e.mood, 0) / withStress.length;
@@ -1477,16 +1622,16 @@
                 });
             }
         }
-
+  
         return patterns;
     }
-
+  
     function renderCharts() {
         const trendCtx = document.getElementById('trendChart');
         if (trendCtx) {
             const last30 = entries.slice(0, 30).reverse();
             const labels = last30.map(e => new Date(e.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-
+  
             new Chart(trendCtx, {
                 type: 'line',
                 data: {
@@ -1534,10 +1679,10 @@
             });
         }
     }
-
+  
     function renderHistory() {
         const container = document.getElementById('historyContent');
-
+  
         if (entries.length === 0) {
             container.innerHTML = `
                 <div class="card">
@@ -1549,9 +1694,9 @@
             `;
             return;
         }
-
+  
         const moodEmojis = ['', '😢', '😔', '😐', '🙂', '😊'];
-
+  
         let html = '<div class="card"><h2>Your Journey</h2>';
         
         entries.forEach(entry => {
@@ -1562,7 +1707,7 @@
                 month: 'long', 
                 day: 'numeric' 
             });
-
+  
             html += `
                 <div class="entry">
                     <div class="entry-date">${formattedDate}</div>
@@ -1581,7 +1726,7 @@
                         </div>
                     </div>
             `;
-
+  
             if (entry.factors.length > 0) {
                 html += '<div class="entry-factors">';
                 entry.factors.forEach(factor => {
@@ -1589,45 +1734,45 @@
                 });
                 html += '</div>';
             }
-
+  
             if (entry.notes) {
                 html += `<div class="entry-notes">"${entry.notes}"</div>`;
             }
-
+  
             html += '</div>';
         });
-
+  
         html += '</div>';
         container.innerHTML = html;
     }
-
+  
     function addGoal() {
         const input = document.getElementById('goalInput');
         const goalText = input.value.trim();
         
         if (!goalText) return;
-
+  
         goals.push({
             id: Date.now(),
             text: goalText,
             completed: false,
             createdAt: new Date().toISOString()
         });
-
+  
         localStorage.setItem('coherenceCompassGoals', JSON.stringify(goals));
         input.value = '';
         loadGoals();
     }
-
+  
     function loadGoals() {
         const container = document.getElementById('goalsList');
         if (!container) return;
-
+  
         if (goals.length === 0) {
             container.innerHTML = '<div class="empty-state"><div class="empty-icon">🎯</div><p style="font-size: 1.2em; color: var(--dark-soft);">Set your first wellness goal!</p></div>';
             return;
         }
-
+  
         let html = '';
         goals.filter(g => !g.completed).forEach(goal => {
             html += `
@@ -1637,42 +1782,150 @@
                 </div>
             `;
         });
-
+  
         if (html === '') {
             container.innerHTML = '<div class="empty-state"><div class="empty-icon">🎉</div><p style="font-size: 1.2em; color: var(--dark-soft);">All goals completed!</p></div>';
         } else {
             container.innerHTML = html;
         }
     }
-
+  
     function completeGoal(id) {
         goals = goals.map(g => g.id === id ? {...g, completed: true} : g);
         localStorage.setItem('coherenceCompassGoals', JSON.stringify(goals));
         loadGoals();
         showSuccessToast();
     }
-
+  
     function toggleTheme() {
         const current = document.documentElement.getAttribute('data-theme');
         const newTheme = current === 'dark' ? 'light' : 'dark';
         document.documentElement.setAttribute('data-theme', newTheme);
         localStorage.setItem('theme', newTheme);
     }
-
+  
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme) {
         document.documentElement.setAttribute('data-theme', savedTheme);
     }
-
+  
     function showCrisisModal() {
         document.getElementById('crisisModal').classList.add('show');
     }
-
+  
     function hideCrisisModal() {
         document.getElementById('crisisModal').classList.remove('show');
     }
-</script>
-```
+  
+    // API Settings Functions
+    function showAPISettings() {
+        const modal = document.getElementById('apiModal');
+        const input = document.getElementById('apiKeyInput');
+        const currentKey = localStorage.getItem('coherenceCompassAPIKey');
+        
+        if (currentKey) {
+            input.value = currentKey.substring(0, 20) + '...' + currentKey.substring(currentKey.length - 4);
+        } else {
+            input.value = '';
+        }
+        
+        modal.classList.add('show');
+    }
+  
+    function hideAPIModal() {
+        document.getElementById('apiModal').classList.remove('show');
+    }
+  
+    function saveAPIKey() {
+        const input = document.getElementById('apiKeyInput');
+        const apiKey = input.value.trim();
+        
+        if (!apiKey) {
+            alert('Please enter an API key');
+            return;
+        }
+        
+        if (!apiKey.startsWith('sk-ant-')) {
+            alert('Invalid API key format. Should start with "sk-ant-"');
+            return;
+        }
+        
+        localStorage.setItem('coherenceCompassAPIKey', apiKey);
+        updateAIMode();
+        hideAPIModal();
+        
+        showSuccessToast();
+        
+        addChatMessage('ai', "🎉 Awesome! I'm now powered by Claude AI. I can have natural conversations and provide deeply personalized insights based on your wellness patterns. What would you like to talk about?");
+    }
+  
+    function removeAPIKey() {
+        if (confirm('Remove Claude API integration? You\'ll return to smart rule-based mode.')) {
+            localStorage.removeItem('coherenceCompassAPIKey');
+            updateAIMode();
+            hideAPIModal();
+            
+            addChatMessage('ai', "I've switched back to smart rule-based mode. I can still help you with evidence-based guidance and pattern insights!");
+        }
+    }
+  
+    function updateAIMode() {
+        const apiKey = localStorage.getItem('coherenceCompassAPIKey');
+        const modeText = document.getElementById('aiMode');
+        const modeIndicator = document.getElementById('coachModeIndicator');
+        
+        if (apiKey && apiKey.startsWith('sk-ant-')) {
+            if (modeText) modeText.textContent = 'Claude AI (Premium)';
+            if (modeIndicator) modeIndicator.textContent = '🤖 Claude AI';
+        } else {
+            if (modeText) modeText.textContent = 'Smart Rule-Based';
+            if (modeIndicator) modeIndicator.textContent = '🧠 Smart Mode';
+        }
+    }
+  
+    function addChatMessage(type, content) {
+        const messagesDiv = document.getElementById('chatMessages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${type}`;
+        messageDiv.innerHTML = `
+            <div class="message-label">${type === 'user' ? 'You' : 'AI Coach'}</div>
+            <div>${content}</div>
+        `;
+        messagesDiv.appendChild(messageDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+  
+    function getInsightContext() {
+        if (entries.length === 0) return 'No check-in data yet.';
+        
+        const recent = entries.slice(0, 7);
+        const avgMood = (recent.reduce((sum, e) => sum + e.mood, 0) / recent.length).toFixed(1);
+        const avgEnergy = (recent.reduce((sum, e) => sum + e.energy, 0) / recent.length).toFixed(1);
+        const avgSleep = (recent.reduce((sum, e) => sum + e.sleep, 0) / recent.length).toFixed(1);
+        
+        const commonFactors = {};
+        recent.forEach(e => {
+            e.factors.forEach(f => {
+                commonFactors[f] = (commonFactors[f] || 0) + 1;
+            });
+        });
+        
+        const topFactors = Object.entries(commonFactors)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3)
+            .map(([factor]) => factor.replace('_', ' '))
+            .join(', ');
+        
+        return `Last 7 days: Average mood ${avgMood}/5, energy ${avgEnergy}/10, sleep ${avgSleep}/10. Total check-ins: ${entries.length}. Common factors: ${topFactors || 'none yet'}.`;
+    }
+  
+    // Initialize AI mode on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        updateAIMode();
+    });
+  ```
+  
+    </script>
 
 </body>
 </html>
