@@ -1164,6 +1164,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         setupEventListeners();
         loadGoals();
+        updateAIMode();
     });
 
     function setupEventListeners() {
@@ -1918,11 +1919,6 @@ Guidelines:
         
         return `Last 7 days: Average mood ${avgMood}/5, energy ${avgEnergy}/10, sleep ${avgSleep}/10. Total check-ins: ${entries.length}. Common factors: ${topFactors || 'none yet'}.`;
     }
-  
-    // Initialize AI mode on page load
-    document.addEventListener('DOMContentLoaded', () => {
-        updateAIMode();
-    });
   ```
   
     </script>
