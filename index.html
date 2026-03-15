@@ -341,16 +341,15 @@ function showFirstStep(){
   const step=getFirstStep(task);
   document.getElementById('firstStepText').textContent=step;
   showScreen('s-start-step');
-  spawnRipple(rW/2,rH/2,'120,240,177','medium');
   startCountdown();
 }
 
 // COUNTDOWN
-let countTimer=null,countVal=5;
+let countTimer=null,countVal=30;
 const CIRC=2*Math.PI*54;
 function startCountdown(){
   clearCountdown();
-  countVal=5;
+  countVal=30;
   updateRing(5);
   countTimer=setInterval(()=>{
     countVal--;
@@ -360,7 +359,7 @@ function startCountdown(){
 }
 function updateRing(n){
   document.getElementById('countdownNum').textContent=n<=0?'GO!':n;
-  const pct=n/5;
+  const pct=n/30;
   document.getElementById('ringFill').style.strokeDashoffset=CIRC*(1-pct);
   if(n<=0){document.getElementById('countdownNum').style.color='var(--go)';}
 }
